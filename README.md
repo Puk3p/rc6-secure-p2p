@@ -14,6 +14,26 @@ Proiectul demonstrează concepte importante din:
 
 ---
 
+
+## Rulare locală (Quick Start)
+
+Pentru prima rulare a proiectului este necesară doar activarea hook-urilor Git și compilarea proiectului folosind Maven Wrapper.
+
+### Activarea hook-urilor Git
+
+După clonarea repository-ului, rulați scriptul de setup.
+
+#### macOS / Linux
+
+```bash
+bash scripts/setup-git-hooks.sh
+```
+### Windows (Yacks)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-git-hooks.ps1
+```
+
 ## Caracteristici principale
 
 Sistemul oferă următoarele funcționalități:
