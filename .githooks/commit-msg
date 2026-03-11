@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -e
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(head -n 1 "$COMMIT_MSG_FILE")
+
+PATTERN='^(feat|fix|docs|style|refactor|test|chore|build|ci|perf|revert)(\([a-zA-Z0-9._-]+\))?(!)?: .{1,72}$'
+
+if ! echo "$COMMIT_MSG" | grep -Eq "$PATTERN"; then
+  echo "Error: invalid commit message format."
+  echo
+  echo "Use Conventional Commits, for example:"
+  echo "  feat: add node bootstrap"
+  echo "  feat(network): add tcp peer server"
+  echo "  fix(protocol): validate packet length"
+  echo "  docs: update architecture section"
+  echo "  chore: configure git hooks"
+  exit 1
+fi

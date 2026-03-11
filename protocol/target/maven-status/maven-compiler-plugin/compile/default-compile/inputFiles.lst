@@ -1,0 +1,14 @@
+/Users/georgelupu/Desktop/Facultate/rc6-secure-p2p/protocol/src/main/java/ro/p2p/protocol/codec/FrameWriter.java
+/Users/georgelupu/Desktop/Facultate/rc6-secure-p2p/protocol/src/main/java/ro/p2p/protocol/serializer/BinaryDeserializer.java
+/Users/georgelupu/Desktop/Facultate/rc6-secure-p2p/protocol/src/main/java/ro/p2p/protocol/packet/ErrorPacket.java
+/Users/georgelupu/Desktop/Facultate/rc6-secure-p2p/protocol/src/main/java/ro/p2p/protocol/packet/Packet.java
+/Users/georgelupu/Desktop/Facultate/rc6-secure-p2p/protocol/src/main/java/ro/p2p/protocol/codec/PacketEncoder.java
+/Users/georgelupu/Desktop/Facultate/rc6-secure-p2p/protocol/src/main/java/ro/p2p/protocol/codec/PacketDecoder.java
+/Users/georgelupu/Desktop/Facultate/rc6-secure-p2p/protocol/src/main/java/ro/p2p/protocol/packet/AckPacket.java
+/Users/georgelupu/Desktop/Facultate/rc6-secure-p2p/protocol/src/main/java/ro/p2p/protocol/packet/MessagePacket.java
+/Users/georgelupu/Desktop/Facultate/rc6-secure-p2p/protocol/src/main/java/ro/p2p/protocol/packet/HelloPacket.java
+/Users/georgelupu/Desktop/Facultate/rc6-secure-p2p/protocol/src/main/java/ro/p2p/protocol/packet/FileChunkPacket.java
+/Users/georgelupu/Desktop/Facultate/rc6-secure-p2p/protocol/src/main/java/ro/p2p/protocol/codec/FrameReader.java
+/Users/georgelupu/Desktop/Facultate/rc6-secure-p2p/protocol/src/main/java/ro/p2p/protocol/validator/PacketValidator.java
+/Users/georgelupu/Desktop/Facultate/rc6-secure-p2p/protocol/src/main/java/ro/p2p/protocol/packet/FileMetaPacket.java
+/Users/georgelupu/Desktop/Facultate/rc6-secure-p2p/protocol/src/main/java/ro/p2p/protocol/serializer/BinarySerializer.java
