@@ -5,14 +5,12 @@ CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 echo "Running pre-push checks..."
 
-# 1. Block direct push to main
 if [ "$CURRENT_BRANCH" = "main" ]; then
   echo "Error: direct push to 'main' is not allowed."
   echo "Create a feature branch and open a Pull Request."
   exit 1
 fi
 
-# 2. Run Maven tests
 echo "Running Maven tests..."
 mvn -q clean test
 
