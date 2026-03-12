@@ -11,7 +11,41 @@ if [ "$CURRENT_BRANCH" = "main" ]; then
   exit 1
 fi
 
+run_maven_tests() {
+  case "$(uname -s)" in
+    Linux*|Darwin*)
+      if [ -f "./mvnw" ]; then
+        chmod +x ./mvnw 2>/dev/null || true
+        ./mvnw -q clean test
+      elif command -v mvn >/dev/null 2>&1; then
+        mvn -q clean test
+      else
+        echo "Error: Maven not found."
+        exit 1
+      fi
+      ;;
+    MINGW*|MSYS*|CYGWIN*)
+      if [ -f "./mvnw.cmd" ]; then
+        cmd.exe /c mvnw.cmd -q clean test
+      elif command -v mvn >/dev/null 2>&1; then
+        mvn -q clean test
+      else
+        echo "Error: Maven not found."
+        exit 1
+      fi
+      ;;
+    *)
+      if command -v mvn >/dev/null 2>&1; then
+        mvn -q clean test
+      else
+        echo "Error: Unsupported OS and Maven not found."
+        exit 1
+      fi
+      ;;
+  esac
+}
+
 echo "Running Maven tests..."
-mvn -q clean test
+run_maven_tests
 
 echo "pre-push passed."
