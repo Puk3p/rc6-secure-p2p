@@ -41,19 +41,28 @@ done
 
 
 EOF_FILES=$(echo "$STAGED_FILES" | grep -E '\.(java|xml|md|properties|txt|yml|yaml|gitignore|sh|ps1)$' || true)
+
+FIXED_EOF_FILES=""
+
 for file in $EOF_FILES; do
   if [ -f "$file" ]; then
     if [ ! -s "$file" ]; then
       continue
     fi
 
-  last_char=$(tail -c 1 "$file" || true)
-  if [ -n "$last_char" ]; then
-    echo "Error: file does not end with EOF: $file"
-    exit 1
-  fi
+    last_byte=$(tail -c 1 "$file" | od -An -t x1 | tr -d ' \n')
+    if [ "$last_byte" != "0a" ]; then
+      printf '\n' >> "$file"
+      git add "$file"
+      FIXED_EOF_FILES="${FIXED_EOF_FILES}\n$file"
+    fi
   fi
 done
+
+if [ -n "$FIXED_EOF_FILES" ]; then
+  echo "Auto-fixed missing EOF newline in:"
+  echo -e "$FIXED_EOF_FILES"
+fi
 
 
 
