@@ -5,31 +5,42 @@ echo "Running pre-commit checks..."
 
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
 
+if [ -z "$STAGED_FILES" ]; then
+  echo "No staged files."
+  exit 0
+fi
+
+
 FORBIDDEN_FILES=$(echo "$STAGED_FILES" | grep -E '\.(class|log|tmp)$' || true)
+
 if [ -n "$FORBIDDEN_FILES" ]; then
   echo "Error: forbidden files are staged:"
   echo "$FORBIDDEN_FILES"
   exit 1
 fi
 
+
 LARGE_FILES=""
-for file in $STAGED_FILES; do
+
+while IFS= read -r file; do
   if [ -f "$file" ]; then
     size=$(wc -c < "$file")
     if [ "$size" -gt 5242880 ]; then
       LARGE_FILES="${LARGE_FILES}\n$file"
     fi
   fi
-done
+done <<< "$STAGED_FILES"
 
 if [ -n "$LARGE_FILES" ]; then
-  echo "Error: large files detected (> 5MB):"
+  echo "Error: large files detected (>5MB):"
   echo -e "$LARGE_FILES"
   exit 1
 fi
 
-TEXT_FILES=$(echo "$STAGED_FILES" | grep -E '\.(java|xml|md|properties|txt|yml|yaml|gitignore)$' || true)
-for file in $TEXT_FILES; do
+
+TEXT_FILES=$(echo "$STAGED_FILES" | grep -E '\.(java|xml|md|properties|txt|yml|yaml|gitignore|sh|ps1)$' || true)
+
+while IFS= read -r file; do
   if [ -f "$file" ]; then
     if grep -nE ' +$' "$file" >/dev/null; then
       echo "Error: trailing spaces found in $file"
@@ -37,27 +48,36 @@ for file in $TEXT_FILES; do
       exit 1
     fi
   fi
-done
+done <<< "$TEXT_FILES"
 
+
+
+echo "Checking EOF newline..."
 
 EOF_FILES=$(echo "$STAGED_FILES" | grep -E '\.(java|xml|md|properties|txt|yml|yaml|gitignore|sh|ps1)$' || true)
 
 FIXED_EOF_FILES=""
 
-for file in $EOF_FILES; do
-  if [ -f "$file" ]; then
-    if [ ! -s "$file" ]; then
-      continue
-    fi
+while IFS= read -r file; do
 
-    last_byte=$(tail -c 1 "$file" | od -An -t x1 | tr -d ' \n')
-    if [ "$last_byte" != "0a" ]; then
-      printf '\n' >> "$file"
-      git add "$file"
-      FIXED_EOF_FILES="${FIXED_EOF_FILES}\n$file"
-    fi
+  if [ ! -f "$file" ]; then
+    continue
   fi
-done
+
+  if [ ! -s "$file" ]; then
+    continue
+  fi
+
+  last_byte=$(tail -c 1 "$file" | od -An -t x1 | tr -d ' \n')
+
+  if [ "$last_byte" != "0a" ]; then
+    printf '\n' >> "$file"
+    git add "$file"
+
+    FIXED_EOF_FILES="${FIXED_EOF_FILES}\n$file"
+  fi
+
+done <<< "$EOF_FILES"
 
 if [ -n "$FIXED_EOF_FILES" ]; then
   echo "Auto-fixed missing EOF newline in:"
@@ -66,17 +86,20 @@ fi
 
 
 
-
 echo "Running Maven compile check..."
 
 run_maven_compile() {
+
   if [ -f "./mvnw" ]; then
     chmod +x ./mvnw 2>/dev/null || true
     ./mvnw -q -DskipTests compile
+
   elif [ -f "./mvnw.cmd" ]; then
     ./mvnw.cmd -q -DskipTests compile
+
   elif command -v mvn >/dev/null 2>&1; then
     mvn -q -DskipTests compile
+
   else
     echo "Error: Maven not found. Install Maven or add Maven Wrapper (mvnw / mvnw.cmd)."
     exit 1
@@ -85,4 +108,5 @@ run_maven_compile() {
 
 run_maven_compile
 
-echo "pre-commit passed."
+
+echo "Pre-commit checks passed."
