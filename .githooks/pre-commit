@@ -40,6 +40,21 @@ for file in $TEXT_FILES; do
 done
 
 echo "Running Maven compile check..."
-mvn -q -DskipTests compile
+
+run_maven_compile() {
+  if [ -f "./mvnw" ]; then
+    chmod +x ./mvnw 2>/dev/null || true
+    ./mvnw -q -DskipTests compile
+  elif [ -f "./mvnw.cmd" ]; then
+    ./mvnw.cmd -q -DskipTests compile
+  elif command -v mvn >/dev/null 2>&1; then
+    mvn -q -DskipTests compile
+  else
+    echo "Error: Maven not found. Install Maven or add Maven Wrapper (mvnw / mvnw.cmd)."
+    exit 1
+  fi
+}
+
+run_maven_compile
 
 echo "pre-commit passed."
