@@ -39,6 +39,25 @@ for file in $TEXT_FILES; do
   fi
 done
 
+
+EOF_FILES=$(echo "$STAGED_FILES" | grep -E '\.(java|xml|md|properties|txt|yml|yaml|gitignore|sh|ps1)$' || true)
+for file in $EOF_FILES; do
+  if [ -f "$file" ]; then
+    if [ ! -s "$file" ]; then
+      continue
+    fi
+
+  last_char=$(tail -c 1 "$file" || true)
+  if [ -n "$last_char" ]; then
+    echo "Error: file does not end with EOF: $file"
+    exit 1
+  fi
+  fi
+done
+
+
+
+
 echo "Running Maven compile check..."
 
 run_maven_compile() {
