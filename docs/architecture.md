@@ -1,5 +1,5 @@
 # Arhitectura Sistemului
-DACA MERGE GEROGE A BELI PULA
+
 ## Prezentare generală
 
 Proiectul este organizat ca **Maven multi-module project**, fiecare modul având un rol clar în arhitectura sistemului.
