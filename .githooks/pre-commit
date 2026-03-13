@@ -28,7 +28,27 @@ if [ -n "$LARGE_FILES" ]; then
   exit 1
 fi
 
-TEXT_FILES=$(echo "$STAGED_FILES" | grep -E '\.(java|xml|md|properties|txt|yml|yaml|gitignore)$' || true)
+TEXT_FILES=$(echo "$STAGED_FILES" | grep -E '\.(java|xml|md|properties|txt|yml|yaml|gitignore|sh|ps1)$' || true)
+
+MISSING_NEWLINE=""
+for file in $TEXT_FILES; do
+  if [ -f "$file" ] && [ -s "$file" ]; then
+    if [ "$(tail -c 1 "$file" | wc -l)" -eq 0 ]; then
+      MISSING_NEWLINE="${MISSING_NEWLINE}\n  $file"
+    fi
+  elif [ -f "$file" ] && [ ! -s "$file" ]; then
+    MISSING_NEWLINE="${MISSING_NEWLINE}\n  $file (empty, no newline)"
+  fi
+done
+
+if [ -n "$MISSING_NEWLINE" ]; then
+  echo "Error: missing final newline in:"
+  echo -e "$MISSING_NEWLINE"
+  echo ""
+  echo "Fix: run 'bash scripts/fix-eof.sh' (macOS/Linux) or 'powershell scripts/fix-eof.ps1' (Windows)"
+  exit 1
+fi
+
 for file in $TEXT_FILES; do
   if [ -f "$file" ]; then
     if grep -nE ' +$' "$file" >/dev/null; then
@@ -42,17 +62,37 @@ done
 echo "Running Maven compile check..."
 
 run_maven_compile() {
-  if [ -f "./mvnw" ]; then
-    chmod +x ./mvnw 2>/dev/null || true
-    ./mvnw -q -DskipTests compile
-  elif [ -f "./mvnw.cmd" ]; then
-    ./mvnw.cmd -q -DskipTests compile
-  elif command -v mvn >/dev/null 2>&1; then
-    mvn -q -DskipTests compile
-  else
-    echo "Error: Maven not found. Install Maven or add Maven Wrapper (mvnw / mvnw.cmd)."
-    exit 1
-  fi
+  case "$(uname -s)" in
+    Linux*|Darwin*)
+      if [ -f "./mvnw" ]; then
+        chmod +x ./mvnw 2>/dev/null || true
+        ./mvnw -q -DskipTests compile
+      elif command -v mvn >/dev/null 2>&1; then
+        mvn -q -DskipTests compile
+      else
+        echo "Error: Maven not found."
+        exit 1
+      fi
+      ;;
+    MINGW*|MSYS*|CYGWIN*)
+      if [ -f "./mvnw.cmd" ]; then
+        cmd.exe /c mvnw.cmd -q -DskipTests compile
+      elif command -v mvn >/dev/null 2>&1; then
+        mvn -q -DskipTests compile
+      else
+        echo "Error: Maven not found."
+        exit 1
+      fi
+      ;;
+    *)
+      if command -v mvn >/dev/null 2>&1; then
+        mvn -q -DskipTests compile
+      else
+        echo "Error: Unsupported OS and Maven not found."
+        exit 1
+      fi
+      ;;
+  esac
 }
 
 run_maven_compile
