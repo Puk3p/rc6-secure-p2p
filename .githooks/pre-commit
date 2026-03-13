@@ -59,16 +59,15 @@ for file in $TEXT_FILES; do
   fi
 done
 
-echo "Running Maven compile check..."
-
-run_maven_compile() {
+run_maven() {
+  local ARGS="$*"
   case "$(uname -s)" in
     Linux*|Darwin*)
       if [ -f "./mvnw" ]; then
         chmod +x ./mvnw 2>/dev/null || true
-        ./mvnw -q -DskipTests compile
+        ./mvnw $ARGS
       elif command -v mvn >/dev/null 2>&1; then
-        mvn -q -DskipTests compile
+        mvn $ARGS
       else
         echo "Error: Maven not found."
         exit 1
@@ -76,9 +75,9 @@ run_maven_compile() {
       ;;
     MINGW*|MSYS*|CYGWIN*)
       if [ -f "./mvnw.cmd" ]; then
-        cmd.exe /c mvnw.cmd -q -DskipTests compile
+        cmd.exe /c mvnw.cmd $ARGS
       elif command -v mvn >/dev/null 2>&1; then
-        mvn -q -DskipTests compile
+        mvn $ARGS
       else
         echo "Error: Maven not found."
         exit 1
@@ -86,7 +85,7 @@ run_maven_compile() {
       ;;
     *)
       if command -v mvn >/dev/null 2>&1; then
-        mvn -q -DskipTests compile
+        mvn $ARGS
       else
         echo "Error: Unsupported OS and Maven not found."
         exit 1
@@ -95,6 +94,17 @@ run_maven_compile() {
   esac
 }
 
-run_maven_compile
+echo "Running Spotless format check..."
+if ! run_maven -q spotless:check; then
+  echo ""
+  echo "Error: code is not formatted correctly."
+  echo ""
+  echo "Fix: run 'mvn spotless:apply' to auto-format all files."
+  echo "     (or './mvnw spotless:apply' / 'mvnw.cmd spotless:apply')"
+  exit 1
+fi
+
+echo "Running Maven compile check..."
+run_maven -q -DskipTests compile
 
 echo "pre-commit passed."

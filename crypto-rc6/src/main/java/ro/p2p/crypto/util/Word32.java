@@ -2,8 +2,7 @@ package ro.p2p.crypto.util;
 
 public final class Word32 {
 
-    private Word32() {
-    }
+    private Word32() {}
 
     public static int rotateLeft(int value, int shift) {
         return Integer.rotateLeft(value, shift & 31);
