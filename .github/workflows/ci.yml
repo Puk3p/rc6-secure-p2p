@@ -7,9 +7,10 @@ on:
     branches-ignore: [ "main" ]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
 
+  format:
+    name: Spotless Format Check
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,5 +22,121 @@ jobs:
           java-version: 17
           cache: maven
 
-      - name: Build
+      - name: Check formatting
+        run: mvn -B spotless:check
+
+  file-hygiene:
+    name: File Hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check trailing whitespace
+        run: |
+          FILES_WITH_TRAILING=$(
+            find . -type f \
+              -not -path './.git/*' \
+              -not -path './.idea/*' \
+              -not -path '*/target/*' \
+              -not -name '*.jar' \
+              -not -name '*.class' \
+              -not -name '.DS_Store' \
+              \( -name '*.java' -o -name '*.xml' -o -name '*.md' \
+                 -o -name '*.properties' -o -name '*.yml' -o -name '*.yaml' \
+                 -o -name '*.sh' -o -name '*.ps1' -o -name '.gitignore' \
+                 -o -name '.editorconfig' \) \
+              -exec grep -lP ' +$' {} \; 2>/dev/null || true
+          )
+          if [ -n "$FILES_WITH_TRAILING" ]; then
+            echo "::error::Trailing whitespace found in:"
+            echo "$FILES_WITH_TRAILING"
+            exit 1
+          fi
+          echo "No trailing whitespace found."
+
+      - name: Check final newline (EOF)
+        run: |
+          MISSING=""
+          while IFS= read -r file; do
+            if [ -s "$file" ]; then
+              if [ "$(tail -c 1 "$file" | wc -l)" -eq 0 ]; then
+                MISSING="$MISSING\n  $file"
+              fi
+            elif [ ! -s "$file" ]; then
+              MISSING="$MISSING\n  $file (empty)"
+            fi
+          done < <(
+            find . -type f \
+              -not -path './.git/*' \
+              -not -path './.idea/*' \
+              -not -path '*/target/*' \
+              -not -name '*.jar' \
+              -not -name '*.class' \
+              -not -name '.DS_Store' \
+              \( -name '*.java' -o -name '*.xml' -o -name '*.md' \
+                 -o -name '*.properties' -o -name '*.yml' -o -name '*.yaml' \
+                 -o -name '*.sh' -o -name '*.ps1' -o -name '.gitignore' \
+                 -o -name '.editorconfig' \)
+          )
+          if [ -n "$MISSING" ]; then
+            echo "::error::Missing final newline in:"
+            echo -e "$MISSING"
+            echo ""
+            echo "Fix: run 'bash scripts/fix-eof.sh' (macOS/Linux) or 'powershell scripts/fix-eof.ps1' (Windows)"
+            exit 1
+          fi
+          echo "All files have a final newline."
+
+  commit-lint:
+    name: Commit Message Lint
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate commit messages
+        run: |
+          PATTERN='^(feat|fix|docs|style|refactor|test|chore|build|ci|perf|revert)(\([a-zA-Z0-9._-]+\))?(!)?: .{1,72}$'
+          ERRORS=""
+          while IFS= read -r sha; do
+            MSG=$(git log --format=%s -n 1 "$sha")
+            if ! echo "$MSG" | grep -Eq "$PATTERN"; then
+              ERRORS="$ERRORS\n  $sha: $MSG"
+            fi
+          done < <(git log --format=%H origin/main..HEAD 2>/dev/null || true)
+          if [ -n "$ERRORS" ]; then
+            echo "::error::Invalid commit message(s):"
+            echo -e "$ERRORS"
+            echo ""
+            echo "Expected format: type(scope): description"
+            echo "Types: feat, fix, docs, style, refactor, test, chore, build, ci, perf, revert"
+            exit 1
+          fi
+          echo "All commit messages follow Conventional Commits."
+
+  build:
+    name: Build & Test (${{ matrix.os }}, JDK ${{ matrix.java }})
+    needs: [ format, file-hygiene ]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+        java: [ 17, 21 ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: maven
+
+      - name: Build & Test
         run: mvn -B clean verify
