@@ -11,14 +11,15 @@ if [ "$CURRENT_BRANCH" = "main" ]; then
   exit 1
 fi
 
-run_maven_tests() {
+run_maven() {
+  local ARGS="$*"
   case "$(uname -s)" in
     Linux*|Darwin*)
       if [ -f "./mvnw" ]; then
         chmod +x ./mvnw 2>/dev/null || true
-        ./mvnw -q clean test
+        ./mvnw $ARGS
       elif command -v mvn >/dev/null 2>&1; then
-        mvn -q clean test
+        mvn $ARGS
       else
         echo "Error: Maven not found."
         exit 1
@@ -26,9 +27,9 @@ run_maven_tests() {
       ;;
     MINGW*|MSYS*|CYGWIN*)
       if [ -f "./mvnw.cmd" ]; then
-        cmd.exe /c mvnw.cmd -q clean test
+        cmd.exe /c mvnw.cmd $ARGS
       elif command -v mvn >/dev/null 2>&1; then
-        mvn -q clean test
+        mvn $ARGS
       else
         echo "Error: Maven not found."
         exit 1
@@ -36,7 +37,7 @@ run_maven_tests() {
       ;;
     *)
       if command -v mvn >/dev/null 2>&1; then
-        mvn -q clean test
+        mvn $ARGS
       else
         echo "Error: Unsupported OS and Maven not found."
         exit 1
@@ -45,7 +46,15 @@ run_maven_tests() {
   esac
 }
 
+echo "Running Spotless format check..."
+if ! run_maven -q spotless:check; then
+  echo ""
+  echo "Error: code is not formatted correctly."
+  echo "Fix: run 'mvn spotless:apply' to auto-format all files."
+  exit 1
+fi
+
 echo "Running Maven tests..."
-run_maven_tests
+run_maven -q clean test
 
 echo "pre-push passed."
