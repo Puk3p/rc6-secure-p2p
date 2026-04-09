@@ -1,0 +1,192 @@
+diff --git a/crypto-rc6/src/test/java/ro/p2p/crypto/core/RC6CipherTest.java b/crypto-rc6/src/test/java/ro/p2p/crypto/core/RC6CipherTest.java
+index 10dfa77..2e0156c 100644
+--- a/crypto-rc6/src/test/java/ro/p2p/crypto/core/RC6CipherTest.java
++++ b/crypto-rc6/src/test/java/ro/p2p/crypto/core/RC6CipherTest.java
+@@ -1,50 +1,21 @@
+ package ro.p2p.crypto.core;
+ 
+-import static org.junit.jupiter.api.Assertions.*;
++import static org.junit.jupiter.api.Assertions.assertArrayEquals;
++import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertFalse;
++import static org.junit.jupiter.api.Assertions.assertNotSame;
++import static org.junit.jupiter.api.Assertions.assertThrows;
+ 
++import java.util.Arrays;
+ import org.junit.jupiter.api.Test;
+ 
+ class RC6CipherTest {
+ 
+     private static final byte[] KEY_128 =
+-            new byte[] {
+-                0x01,
+-                0x23,
+-                0x45,
+-                0x67,
+-                (byte) 0x89,
+-                (byte) 0xAB,
+-                (byte) 0xCD,
+-                (byte) 0xEF,
+-                0x01,
+-                0x23,
+-                0x45,
+-                0x67,
+-                (byte) 0x89,
+-                (byte) 0xAB,
+-                (byte) 0xCD,
+-                (byte) 0xEF
+-            };
++            hex("01 23 45 67 89 AB CD EF 01 23 45 67 89 AB CD EF");
+ 
+     private static final byte[] PLAINTEXT_BLOCK =
+-            new byte[] {
+-                0x02,
+-                0x13,
+-                0x24,
+-                0x35,
+-                0x46,
+-                0x57,
+-                0x68,
+-                0x79,
+-                (byte) 0x8A,
+-                (byte) 0x9B,
+-                (byte) 0xAC,
+-                (byte) 0xBD,
+-                (byte) 0xCE,
+-                (byte) 0xDF,
+-                (byte) 0xE0,
+-                (byte) 0xF1
+-            };
++            hex("02 13 24 35 46 57 68 79 8A 9B AC BD CE DF E0 F1");
+ 
+     @Test
+     void encryptThenDecryptReturnsOriginalPlaintext() {
+@@ -62,30 +33,12 @@ class RC6CipherTest {
+ 
+         byte[] ciphertext = cipher.encryptBlock(PLAINTEXT_BLOCK);
+ 
+-        assertFalse(java.util.Arrays.equals(PLAINTEXT_BLOCK, ciphertext));
++        assertFalse(Arrays.equals(PLAINTEXT_BLOCK, ciphertext));
+     }
+ 
+     @Test
+     void differentKeysProduceDifferentCiphertext() {
+-        byte[] key2 =
+-                new byte[] {
+-                    (byte) 0xFF,
+-                    (byte) 0xEE,
+-                    (byte) 0xDD,
+-                    (byte) 0xCC,
+-                    (byte) 0xBB,
+-                    (byte) 0xAA,
+-                    (byte) 0x99,
+-                    (byte) 0x88,
+-                    0x77,
+-                    0x66,
+-                    0x55,
+-                    0x44,
+-                    0x33,
+-                    0x22,
+-                    0x11,
+-                    0x00
+-                };
++        byte[] key2 = hex("FF EE DD CC BB AA 99 88 77 66 55 44 33 22 11 00");
+ 
+         RC6Cipher cipher1 = new RC6Cipher(KEY_128);
+         RC6Cipher cipher2 = new RC6Cipher(key2);
+@@ -93,7 +46,7 @@ class RC6CipherTest {
+         byte[] ciphertext1 = cipher1.encryptBlock(PLAINTEXT_BLOCK);
+         byte[] ciphertext2 = cipher2.encryptBlock(PLAINTEXT_BLOCK);
+ 
+-        assertFalse(java.util.Arrays.equals(ciphertext1, ciphertext2));
++        assertFalse(Arrays.equals(ciphertext1, ciphertext2));
+     }
+ 
+     @Test
+@@ -137,6 +90,58 @@ class RC6CipherTest {
+         assertArrayEquals(zeroBlock, decrypted);
+     }
+ 
++    @Test
++    void officialVector128AllZeroKeyAndPlaintextMatchesExpectedCiphertext() {
++        assertOfficialVector(
++                hex("00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
++                hex("00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
++                hex("8F C3 A5 36 56 B1 F7 78 C1 29 DF 4E 98 48 A4 1E"));
++    }
++
++    @Test
++    void officialVector128CustomKeyAndPlaintextMatchesExpectedCiphertext() {
++        assertOfficialVector(
++                hex("01 23 45 67 89 AB CD EF 01 12 23 34 45 56 67 78"),
++                hex("02 13 24 35 46 57 68 79 8A 9B AC BD CE DF E0 F1"),
++                hex("52 4E 19 2F 47 15 C6 23 1F 51 F6 36 7E A4 3F 18"));
++    }
++
++    @Test
++    void officialVector192AllZeroKeyAndPlaintextMatchesExpectedCiphertext() {
++        assertOfficialVector(
++                hex("00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
++                        + "00 00 00 00 00 00 00 00"),
++                hex("00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
++                hex("6C D6 1B CB 19 0B 30 38 4E 8A 3F 16 86 90 AE 82"));
++    }
++
++    @Test
++    void officialVector192CustomKeyAndPlaintextMatchesExpectedCiphertext() {
++        assertOfficialVector(
++                hex("01 23 45 67 89 AB CD EF 01 12 23 34 45 56 67 78 "
++                        + "89 9A AB BC CD DE EF F0"),
++                hex("02 13 24 35 46 57 68 79 8A 9B AC BD CE DF E0 F1"),
++                hex("68 83 29 D0 19 E5 05 04 1E 52 E9 2A F9 52 91 D4"));
++    }
++
++    @Test
++    void officialVector256AllZeroKeyAndPlaintextMatchesExpectedCiphertext() {
++        assertOfficialVector(
++                hex("00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
++                        + "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
++                hex("00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
++                hex("8F 5F BD 05 10 D1 5F A8 93 FA 3F DA 6E 85 7E C2"));
++    }
++
++    @Test
++    void officialVector256CustomKeyAndPlaintextMatchesExpectedCiphertext() {
++        assertOfficialVector(
++                hex("01 23 45 67 89 AB CD EF 01 12 23 34 45 56 67 78 "
++                        + "89 9A AB BC CD DE EF F0 10 32 54 76 98 BA DC FE"),
++                hex("02 13 24 35 46 57 68 79 8A 9B AC BD CE DF E0 F1"),
++                hex("C8 24 18 16 F0 D7 E4 89 20 AD 16 A1 67 4E 5D 48"));
++    }
++
+     @Test
+     void invalidBlockSizeThrowsException() {
+         RC6Cipher cipher = new RC6Cipher(KEY_128);
+@@ -168,4 +173,27 @@ class RC6CipherTest {
+         assertArrayEquals(subkeys1, subkeys2);
+         assertNotSame(subkeys1, subkeys2);
+     }
++
++    private static void assertOfficialVector(byte[] key, byte[] plaintext, byte[] expectedCiphertext) {
++        RC6Cipher cipher = new RC6Cipher(key);
++
++        byte[] ciphertext = cipher.encryptBlock(plaintext);
++        byte[] decrypted = cipher.decryptBlock(expectedCiphertext);
++
++        assertArrayEquals(expectedCiphertext, ciphertext);
++        assertArrayEquals(plaintext, decrypted);
++    }
++
++    private static byte[] hex(String value) {
++        String normalized = value.replaceAll("\\s+", "");
++        if ((normalized.length() & 1) != 0) {
++            throw new IllegalArgumentException("Hex string must contain an even number of characters");
++        }
++
++        byte[] bytes = new byte[normalized.length() / 2];
++        for (int i = 0; i < normalized.length(); i += 2) {
++            bytes[i / 2] = (byte) Integer.parseInt(normalized.substring(i, i + 2), 16);
++        }
++        return bytes;
++    }
+ }
