@@ -34,7 +34,8 @@ public class DhKeyAgreementService {
         }
     }
 
-    public DhResponderResult createResponderResult(byte[] initiatorPublicKeyBytes, byte[] initiatorNonce) {
+    public DhResponderResult createResponderResult(
+            byte[] initiatorPublicKeyBytes, byte[] initiatorNonce) {
         try {
             PublicKey initiatorPublicKey = decodePublicKey(initiatorPublicKeyBytes);
             DHParameterSpec params = ((DHPublicKey) initiatorPublicKey).getParams();
@@ -50,20 +51,17 @@ public class DhKeyAgreementService {
             byte[] rc6Key = deriveRc6Key(sharedSecret, initiatorNonce, responderNonce);
 
             return new DhResponderResult(
-                responderKeyPair.getPublic().getEncoded(),
-                responderNonce,
-                rc6Key
-            );
+                    responderKeyPair.getPublic().getEncoded(), responderNonce, rc6Key);
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException("Failed to create DH responder result", e);
         }
     }
 
     public byte[] completeInitiator(
-        KeyPair initiatorKeyPair,
-        byte[] responderPublicKeyBytes,
-        byte[] initiatorNonce,
-        byte[] responderNonce) {
+            KeyPair initiatorKeyPair,
+            byte[] responderPublicKeyBytes,
+            byte[] initiatorNonce,
+            byte[] responderNonce) {
         try {
             PublicKey responderPublicKey = decodePublicKey(responderPublicKeyBytes);
             byte[] sharedSecret = computeSharedSecret(initiatorKeyPair, responderPublicKey);
@@ -79,7 +77,7 @@ public class DhKeyAgreementService {
     }
 
     private byte[] computeSharedSecret(KeyPair ownKeyPair, PublicKey peerPublicKey)
-        throws GeneralSecurityException {
+            throws GeneralSecurityException {
         KeyAgreement keyAgreement = KeyAgreement.getInstance("DH");
         keyAgreement.init(ownKeyPair.getPrivate());
         keyAgreement.doPhase(peerPublicKey, true);
@@ -87,7 +85,7 @@ public class DhKeyAgreementService {
     }
 
     private byte[] deriveRc6Key(byte[] sharedSecret, byte[] initiatorNonce, byte[] responderNonce)
-        throws GeneralSecurityException {
+            throws GeneralSecurityException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         digest.update(sharedSecret);
         digest.update(initiatorNonce);

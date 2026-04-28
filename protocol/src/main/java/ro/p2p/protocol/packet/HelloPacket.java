@@ -10,7 +10,8 @@ public class HelloPacket {
     private final byte[] nonce;
     private final boolean response;
 
-    public HelloPacket(String nodeId, int listenPort, byte[] publicKey, byte[] nonce, boolean response) {
+    public HelloPacket(
+            String nodeId, int listenPort, byte[] publicKey, byte[] nonce, boolean response) {
         this.nodeId = nodeId;
         this.listenPort = listenPort;
         this.publicKey = Arrays.copyOf(publicKey, publicKey.length);

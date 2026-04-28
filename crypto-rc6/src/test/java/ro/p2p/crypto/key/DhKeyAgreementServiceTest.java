@@ -17,16 +17,15 @@ class DhKeyAgreementServiceTest {
         DhKeyAgreementService.DhInitiatorState initiator = service.createInitiatorState();
 
         DhKeyAgreementService.DhResponderResult responder =
-            service.createResponderResult(
-                initiator.getPublicKeyEncoded(),
-                initiator.getNonce());
+                service.createResponderResult(
+                        initiator.getPublicKeyEncoded(), initiator.getNonce());
 
         byte[] initiatorKey =
-            service.completeInitiator(
-                initiator.getKeyPair(),
-                responder.getPublicKeyEncoded(),
-                initiator.getNonce(),
-                responder.getNonce());
+                service.completeInitiator(
+                        initiator.getKeyPair(),
+                        responder.getPublicKeyEncoded(),
+                        initiator.getNonce(),
+                        responder.getNonce());
 
         assertNotNull(initiatorKey);
         assertNotNull(responder.getRc6Key());
@@ -42,16 +41,15 @@ class DhKeyAgreementServiceTest {
         DhKeyAgreementService.DhInitiatorState initiator = service.createInitiatorState();
 
         DhKeyAgreementService.DhResponderResult responder =
-            service.createResponderResult(
-                initiator.getPublicKeyEncoded(),
-                initiator.getNonce());
+                service.createResponderResult(
+                        initiator.getPublicKeyEncoded(), initiator.getNonce());
 
         byte[] initiatorKey =
-            service.completeInitiator(
-                initiator.getKeyPair(),
-                responder.getPublicKeyEncoded(),
-                initiator.getNonce(),
-                responder.getNonce());
+                service.completeInitiator(
+                        initiator.getKeyPair(),
+                        responder.getPublicKeyEncoded(),
+                        initiator.getNonce(),
+                        responder.getNonce());
 
         assertEquals(16, initiatorKey.length);
     }
@@ -62,29 +60,27 @@ class DhKeyAgreementServiceTest {
 
         DhKeyAgreementService.DhInitiatorState initiator1 = service.createInitiatorState();
         DhKeyAgreementService.DhResponderResult responder1 =
-            service.createResponderResult(
-                initiator1.getPublicKeyEncoded(),
-                initiator1.getNonce());
+                service.createResponderResult(
+                        initiator1.getPublicKeyEncoded(), initiator1.getNonce());
 
         byte[] sessionKey1 =
-            service.completeInitiator(
-                initiator1.getKeyPair(),
-                responder1.getPublicKeyEncoded(),
-                initiator1.getNonce(),
-                responder1.getNonce());
+                service.completeInitiator(
+                        initiator1.getKeyPair(),
+                        responder1.getPublicKeyEncoded(),
+                        initiator1.getNonce(),
+                        responder1.getNonce());
 
         DhKeyAgreementService.DhInitiatorState initiator2 = service.createInitiatorState();
         DhKeyAgreementService.DhResponderResult responder2 =
-            service.createResponderResult(
-                initiator2.getPublicKeyEncoded(),
-                initiator2.getNonce());
+                service.createResponderResult(
+                        initiator2.getPublicKeyEncoded(), initiator2.getNonce());
 
         byte[] sessionKey2 =
-            service.completeInitiator(
-                initiator2.getKeyPair(),
-                responder2.getPublicKeyEncoded(),
-                initiator2.getNonce(),
-                responder2.getNonce());
+                service.completeInitiator(
+                        initiator2.getKeyPair(),
+                        responder2.getPublicKeyEncoded(),
+                        initiator2.getNonce(),
+                        responder2.getNonce());
 
         assertFalse(Arrays.equals(sessionKey1, sessionKey2));
     }
@@ -98,13 +94,13 @@ class DhKeyAgreementServiceTest {
         byte[] invalidPublicKey = new byte[] {0x01, 0x02, 0x03};
 
         assertThrows(
-            IllegalStateException.class,
-            () ->
-                service.completeInitiator(
-                    initiator.getKeyPair(),
-                    invalidPublicKey,
-                    initiator.getNonce(),
-                    new byte[16]));
+                IllegalStateException.class,
+                () ->
+                        service.completeInitiator(
+                                initiator.getKeyPair(),
+                                invalidPublicKey,
+                                initiator.getNonce(),
+                                new byte[16]));
     }
 
     @Test
@@ -115,7 +111,7 @@ class DhKeyAgreementServiceTest {
         byte[] initiatorNonce = new byte[16];
 
         assertThrows(
-            IllegalStateException.class,
-            () -> service.createResponderResult(invalidPublicKey, initiatorNonce));
+                IllegalStateException.class,
+                () -> service.createResponderResult(invalidPublicKey, initiatorNonce));
     }
 }
