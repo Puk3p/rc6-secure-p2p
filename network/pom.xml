@@ -24,6 +24,10 @@
             <groupId>ro.p2p</groupId>
             <artifactId>protocol</artifactId>
         </dependency>
+        <dependency>
+            <groupId>ro.p2p</groupId>
+            <artifactId>crypto-rc6</artifactId>
+        </dependency>
     </dependencies>
 
 </project>
