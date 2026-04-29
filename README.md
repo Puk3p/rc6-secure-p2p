@@ -38,6 +38,18 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup-git-hooks.ps1
 
 Pentru a rula pașii proiectului în ordine înainte de commit / PR, folosiți orchestratorul potrivit sistemului de operare.
 
+#### Run all
+
+Rulează verificările complete și afișează ordinea de pornire pentru demo-ul local cu 3 noduri.
+
+```bash
+bash scripts/run-all.sh
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run-all.ps1
+```
+
 #### macOS / Linux
 
 ```bash
