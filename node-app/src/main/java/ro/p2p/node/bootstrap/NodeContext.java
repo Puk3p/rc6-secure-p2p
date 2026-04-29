@@ -44,6 +44,10 @@ public class NodeContext {
         return ackTracker;
     }
 
+    public FileTransferService getFileTransferService() {
+        return fileTransferService;
+    }
+
     public PacketRouter getPacketRouter() {
         return packetRouter;
     }

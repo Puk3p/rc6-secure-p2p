@@ -3,9 +3,11 @@ package ro.p2p.node.app;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import ro.p2p.common.model.PeerAddress;
 import ro.p2p.messaging.service.MessageReceiveService;
 import ro.p2p.network.client.TcpPeerClient;
@@ -51,6 +53,28 @@ public class NodeRuntime implements Closeable {
                         .find(peerId)
                         .orElseThrow(() -> new IllegalArgumentException("Unknown peer: " + peerId));
         return context.getSecureMessageService().sendMessage(connection, message);
+    }
+
+    public String sendFileBytes(String peerId, byte[] data) {
+        PeerConnection connection =
+                context.getConnectionRegistry()
+                        .find(peerId)
+                        .orElseThrow(() -> new IllegalArgumentException("Unknown peer: " + peerId));
+        return context.getFileTransferService().sendBytes(connection, data);
+    }
+
+    public boolean isConnected(String peerId) {
+        return context.getConnectionRegistry()
+                .find(peerId)
+                .filter(PeerConnection::isOpen)
+                .isPresent();
+    }
+
+    public Set<String> getConnectedPeerIds() {
+        return context.getConnectionRegistry().all().stream()
+                .filter(PeerConnection::isOpen)
+                .map(PeerConnection::getPeerId)
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     public NodeContext getContext() {

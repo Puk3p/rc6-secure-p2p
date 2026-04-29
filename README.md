@@ -60,6 +60,34 @@ Orchestratorul rulează, în ordine:
 6. rularea testelor
 7. împachetarea aplicației
 
+### Pornirea nodurilor locale
+
+După build, aplicația principală se găsește în `node-app/target/node-app.jar`.
+
+Porniți fiecare nod într-un terminal separat:
+
+```bash
+java -jar node-app/target/node-app.jar node-configs/node-a.properties
+java -jar node-app/target/node-app.jar node-configs/node-b.properties
+java -jar node-app/target/node-app.jar node-configs/node-c.properties
+```
+
+Comenzi disponibile în CLI:
+
+```text
+help
+peers
+send <peerId> <message>
+send-file <peerId> <path>
+exit
+```
+
+Exemplu:
+
+```text
+send node-b Salut de la node-a
+```
+
 ## Caracteristici principale
 
 Sistemul oferă următoarele funcționalități:
