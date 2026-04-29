@@ -100,6 +100,18 @@ Exemplu:
 send node-b Salut de la node-a
 ```
 
+Pentru transfer de fișier:
+
+```text
+send-file node-b test-file.txt
+```
+
+Nodul destinatar salvează fișierul primit în:
+
+```text
+received/<node-id>/<file-name>
+```
+
 ## Caracteristici principale
 
 Sistemul oferă următoarele funcționalități:

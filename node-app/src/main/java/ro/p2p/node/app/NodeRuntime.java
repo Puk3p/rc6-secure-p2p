@@ -25,7 +25,7 @@ public class NodeRuntime implements Closeable {
 
     public NodeRuntime(String nodeId, Consumer<String> onMessage) {
         this.nodeId = nodeId;
-        this.context = new NodeContext(new MessageReceiveService(onMessage));
+        this.context = new NodeContext(nodeId, new MessageReceiveService(onMessage));
     }
 
     public void start(int port) throws IOException {
@@ -56,11 +56,15 @@ public class NodeRuntime implements Closeable {
     }
 
     public String sendFileBytes(String peerId, byte[] data) {
+        return sendFileBytes(peerId, data, "received.bin");
+    }
+
+    public String sendFileBytes(String peerId, byte[] data, String fileName) {
         PeerConnection connection =
                 context.getConnectionRegistry()
                         .find(peerId)
                         .orElseThrow(() -> new IllegalArgumentException("Unknown peer: " + peerId));
-        return context.getFileTransferService().sendBytes(connection, data);
+        return context.getFileTransferService().sendBytes(connection, data, fileName);
     }
 
     public boolean isConnected(String peerId) {

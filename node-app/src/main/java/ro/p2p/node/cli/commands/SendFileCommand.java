@@ -22,7 +22,7 @@ public class SendFileCommand implements RunnableCommand {
         }
         Path path = Path.of(args[1]);
         byte[] data = Files.readAllBytes(path);
-        String transferId = runtime.sendFileBytes(args[0], data);
+        String transferId = runtime.sendFileBytes(args[0], data, path.getFileName().toString());
         System.out.println(
                 "Sent encrypted file bytes "
                         + transferId

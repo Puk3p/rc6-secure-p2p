@@ -22,6 +22,10 @@ public class FileTransferService {
         return sendService.sendBytes(connection, data);
     }
 
+    public String sendBytes(PeerConnection connection, byte[] data, String fileName) {
+        return sendService.sendBytes(connection, data, fileName);
+    }
+
     public Optional<byte[]> receive(FileChunkPacket packet, byte[] sessionKey) {
         return receiveService.receive(packet, sessionKey);
     }

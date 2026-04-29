@@ -19,13 +19,13 @@ public class NodeContext {
     private final FileTransferService fileTransferService = new FileTransferService();
     private final PacketRouter packetRouter;
 
-    public NodeContext(MessageReceiveService messageReceiveService) {
+    public NodeContext(String localNodeId, MessageReceiveService messageReceiveService) {
         this.messageReceiveService = messageReceiveService;
         this.packetRouter =
                 new PacketRouter(
                         new MessagePacketHandler(messageReceiveService, secureMessageService),
                         new AckPacketHandler(ackTracker),
-                        new FilePacketHandler(fileTransferService));
+                        new FilePacketHandler(localNodeId, fileTransferService));
     }
 
     public ConnectionRegistry getConnectionRegistry() {

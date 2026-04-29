@@ -4,6 +4,7 @@ import java.util.Optional;
 import ro.p2p.network.connection.PeerConnection;
 import ro.p2p.protocol.packet.AckPacket;
 import ro.p2p.protocol.packet.FileChunkPacket;
+import ro.p2p.protocol.packet.FileMetaPacket;
 import ro.p2p.protocol.packet.MessagePacket;
 import ro.p2p.protocol.packet.Packet;
 
@@ -34,6 +35,10 @@ public class PacketRouter {
         }
         if (packet instanceof FileChunkPacket) {
             return fileHandler.handle(connection, (FileChunkPacket) packet).map(Object.class::cast);
+        }
+        if (packet instanceof FileMetaPacket) {
+            fileHandler.handleMeta((FileMetaPacket) packet);
+            return Optional.empty();
         }
         return Optional.empty();
     }
