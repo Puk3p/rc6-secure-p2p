@@ -34,6 +34,32 @@ bash scripts/setup-git-hooks.sh
 powershell -ExecutionPolicy Bypass -File .\scripts\setup-git-hooks.ps1
 ```
 
+### Orchestrator local
+
+Pentru a rula pașii proiectului în ordine înainte de commit / PR, folosiți orchestratorul potrivit sistemului de operare.
+
+#### macOS / Linux
+
+```bash
+bash scripts/orchestrate.sh
+```
+
+#### Windows
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\orchestrate.ps1
+```
+
+Orchestratorul rulează, în ordine:
+
+1. instalarea hook-urilor Git
+2. normalizarea newline-urilor finale
+3. aplicarea formatării Java
+4. verificarea formatării
+5. compilarea modulelor
+6. rularea testelor
+7. împachetarea aplicației
+
 ## Caracteristici principale
 
 Sistemul oferă următoarele funcționalități:
