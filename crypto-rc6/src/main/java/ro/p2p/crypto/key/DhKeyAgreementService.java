@@ -1,117 +1,216 @@
 package ro.p2p.crypto.key;
 
-import java.security.GeneralSecurityException;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
+import java.math.BigInteger;
 import java.security.MessageDigest;
-import java.security.PublicKey;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
-import javax.crypto.KeyAgreement;
-import javax.crypto.interfaces.DHPublicKey;
-import javax.crypto.spec.DHParameterSpec;
 
 public class DhKeyAgreementService {
 
-    private static final int DH_KEY_SIZE = 2048;
+    private static final String KDF_LABEL = "RC6-P2P-DH-v1";
+    private static final int PRIVATE_EXPONENT_BITS = 256;
     private static final int RC6_KEY_SIZE = 16;
-    private final SecureRandom secureRandom = new SecureRandom();
+    private static final int NONCE_SIZE = 16;
+    private static final BigInteger TWO = BigInteger.valueOf(2L);
+    private static final BigInteger GENERATOR = TWO;
+
+    // RFC 3526, 2048-bit MODP Group (group 14). This keeps DH explicit and reproducible.
+    private static final BigInteger PRIME =
+            new BigInteger(
+                    "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
+                            + "29024E088A67CC74020BBEA63B139B22514A08798E3404DD"
+                            + "EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"
+                            + "E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED"
+                            + "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3D"
+                            + "C2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F"
+                            + "83655D23DCA3AD961C62F356208552BB9ED529077096966D"
+                            + "670C354E4ABC9804F1746C08CA18217C32905E462E36CE3B"
+                            + "E39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9"
+                            + "DE2BCBF6955817183995497CEA956AE515D2261898FA0510"
+                            + "15728E5A8AACAA68FFFFFFFFFFFFFFFF",
+                    16);
+    private static final int PUBLIC_VALUE_SIZE = (PRIME.bitLength() + 7) / 8;
+
+    private final SecureRandom secureRandom;
+
+    public DhKeyAgreementService() {
+        this(new SecureRandom());
+    }
+
+    DhKeyAgreementService(SecureRandom secureRandom) {
+        this.secureRandom = secureRandom;
+    }
 
     public DhInitiatorState createInitiatorState() {
-        try {
-            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("DH");
-            keyPairGenerator.initialize(DH_KEY_SIZE);
-            KeyPair keyPair = keyPairGenerator.generateKeyPair();
+        byte[] nonce = new byte[NONCE_SIZE];
+        secureRandom.nextBytes(nonce);
+        return createInitiatorState(generatePrivateExponent(), nonce);
+    }
 
-            byte[] nonce = new byte[16];
-            secureRandom.nextBytes(nonce);
-
-            return new DhInitiatorState(keyPair, nonce);
-        } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("Failed to create DH initiator state", e);
-        }
+    DhInitiatorState createInitiatorState(BigInteger privateExponent, byte[] nonce) {
+        validatePrivateExponent(privateExponent);
+        validateNonce(nonce, "Initiator nonce");
+        BigInteger publicValue = GENERATOR.modPow(privateExponent, PRIME);
+        return new DhInitiatorState(privateExponent, encodePublicValue(publicValue), nonce);
     }
 
     public DhResponderResult createResponderResult(
             byte[] initiatorPublicKeyBytes, byte[] initiatorNonce) {
-        try {
-            PublicKey initiatorPublicKey = decodePublicKey(initiatorPublicKeyBytes);
-            DHParameterSpec params = ((DHPublicKey) initiatorPublicKey).getParams();
+        byte[] responderNonce = new byte[NONCE_SIZE];
+        secureRandom.nextBytes(responderNonce);
+        return createResponderResult(
+                initiatorPublicKeyBytes, initiatorNonce, generatePrivateExponent(), responderNonce);
+    }
 
-            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("DH");
-            keyPairGenerator.initialize(params);
-            KeyPair responderKeyPair = keyPairGenerator.generateKeyPair();
+    DhResponderResult createResponderResult(
+            byte[] initiatorPublicKeyBytes,
+            byte[] initiatorNonce,
+            BigInteger responderPrivateExponent,
+            byte[] responderNonce) {
+        validateNonce(initiatorNonce, "Initiator nonce");
+        validateNonce(responderNonce, "Responder nonce");
+        validatePrivateExponent(responderPrivateExponent);
 
-            byte[] responderNonce = new byte[16];
-            secureRandom.nextBytes(responderNonce);
+        BigInteger initiatorPublicValue = decodeAndValidatePublicValue(initiatorPublicKeyBytes);
+        BigInteger responderPublicValue = GENERATOR.modPow(responderPrivateExponent, PRIME);
+        byte[] responderPublicKey = encodePublicValue(responderPublicValue);
+        byte[] sharedSecret = computeSharedSecret(initiatorPublicValue, responderPrivateExponent);
+        byte[] rc6Key =
+                deriveRc6Key(
+                        sharedSecret,
+                        initiatorPublicKeyBytes,
+                        responderPublicKey,
+                        initiatorNonce,
+                        responderNonce);
 
-            byte[] sharedSecret = computeSharedSecret(responderKeyPair, initiatorPublicKey);
-            byte[] rc6Key = deriveRc6Key(sharedSecret, initiatorNonce, responderNonce);
-
-            return new DhResponderResult(
-                    responderKeyPair.getPublic().getEncoded(), responderNonce, rc6Key);
-        } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("Failed to create DH responder result", e);
-        }
+        return new DhResponderResult(responderPublicKey, responderNonce, rc6Key);
     }
 
     public byte[] completeInitiator(
-            KeyPair initiatorKeyPair,
+            DhInitiatorState initiatorState,
             byte[] responderPublicKeyBytes,
+            byte[] responderNonce) {
+        if (initiatorState == null) {
+            throw new IllegalArgumentException("Initiator state must not be null");
+        }
+        validateNonce(responderNonce, "Responder nonce");
+
+        BigInteger responderPublicValue = decodeAndValidatePublicValue(responderPublicKeyBytes);
+        byte[] sharedSecret =
+                computeSharedSecret(responderPublicValue, initiatorState.getPrivateExponent());
+        return deriveRc6Key(
+                sharedSecret,
+                initiatorState.getPublicKeyEncoded(),
+                responderPublicKeyBytes,
+                initiatorState.getNonce(),
+                responderNonce);
+    }
+
+    private BigInteger generatePrivateExponent() {
+        BigInteger exponent;
+        do {
+            exponent = new BigInteger(PRIVATE_EXPONENT_BITS, secureRandom);
+        } while (exponent.compareTo(TWO) < 0 || exponent.compareTo(PRIME.subtract(TWO)) > 0);
+        return exponent;
+    }
+
+    private byte[] computeSharedSecret(BigInteger peerPublicValue, BigInteger ownPrivateExponent) {
+        BigInteger sharedValue = peerPublicValue.modPow(ownPrivateExponent, PRIME);
+        if (sharedValue.compareTo(BigInteger.ONE) <= 0) {
+            throw new IllegalArgumentException("Invalid DH shared secret");
+        }
+        return toFixedLength(sharedValue, PUBLIC_VALUE_SIZE);
+    }
+
+    private byte[] deriveRc6Key(
+            byte[] sharedSecret,
+            byte[] initiatorPublicKey,
+            byte[] responderPublicKey,
             byte[] initiatorNonce,
             byte[] responderNonce) {
         try {
-            PublicKey responderPublicKey = decodePublicKey(responderPublicKeyBytes);
-            byte[] sharedSecret = computeSharedSecret(initiatorKeyPair, responderPublicKey);
-            return deriveRc6Key(sharedSecret, initiatorNonce, responderNonce);
-        } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("Failed to complete DH initiator flow", e);
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            digest.update(KDF_LABEL.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+            digest.update(sharedSecret);
+            digest.update(initiatorPublicKey);
+            digest.update(responderPublicKey);
+            digest.update(initiatorNonce);
+            digest.update(responderNonce);
+            return Arrays.copyOf(digest.digest(), RC6_KEY_SIZE);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is required for DH key derivation", e);
         }
     }
 
-    private PublicKey decodePublicKey(byte[] encoded) throws GeneralSecurityException {
-        KeyFactory keyFactory = KeyFactory.getInstance("DH");
-        return keyFactory.generatePublic(new X509EncodedKeySpec(encoded));
+    private BigInteger decodeAndValidatePublicValue(byte[] encodedPublicValue) {
+        if (encodedPublicValue == null || encodedPublicValue.length != PUBLIC_VALUE_SIZE) {
+            throw new IllegalArgumentException(
+                    "DH public value must be exactly " + PUBLIC_VALUE_SIZE + " bytes");
+        }
+        BigInteger publicValue = new BigInteger(1, encodedPublicValue);
+        if (publicValue.compareTo(TWO) < 0 || publicValue.compareTo(PRIME.subtract(TWO)) > 0) {
+            throw new IllegalArgumentException("DH public value is outside the valid group range");
+        }
+        return publicValue;
     }
 
-    private byte[] computeSharedSecret(KeyPair ownKeyPair, PublicKey peerPublicKey)
-            throws GeneralSecurityException {
-        KeyAgreement keyAgreement = KeyAgreement.getInstance("DH");
-        keyAgreement.init(ownKeyPair.getPrivate());
-        keyAgreement.doPhase(peerPublicKey, true);
-        return keyAgreement.generateSecret();
+    private byte[] encodePublicValue(BigInteger publicValue) {
+        return toFixedLength(publicValue, PUBLIC_VALUE_SIZE);
     }
 
-    private byte[] deriveRc6Key(byte[] sharedSecret, byte[] initiatorNonce, byte[] responderNonce)
-            throws GeneralSecurityException {
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        digest.update(sharedSecret);
-        digest.update(initiatorNonce);
-        digest.update(responderNonce);
-        return Arrays.copyOf(digest.digest(), RC6_KEY_SIZE);
+    private byte[] toFixedLength(BigInteger value, int length) {
+        byte[] raw = value.toByteArray();
+        if (raw.length == length) {
+            return raw;
+        }
+        if (raw.length == length + 1 && raw[0] == 0) {
+            return Arrays.copyOfRange(raw, 1, raw.length);
+        }
+        if (raw.length > length) {
+            throw new IllegalArgumentException("Value does not fit in expected DH byte length");
+        }
+        byte[] result = new byte[length];
+        System.arraycopy(raw, 0, result, length - raw.length, raw.length);
+        return result;
+    }
+
+    private void validatePrivateExponent(BigInteger privateExponent) {
+        if (privateExponent == null
+                || privateExponent.compareTo(TWO) < 0
+                || privateExponent.compareTo(PRIME.subtract(TWO)) > 0) {
+            throw new IllegalArgumentException("Invalid DH private exponent");
+        }
+    }
+
+    private void validateNonce(byte[] nonce, String name) {
+        if (nonce == null || nonce.length != NONCE_SIZE) {
+            throw new IllegalArgumentException(name + " must be " + NONCE_SIZE + " bytes");
+        }
     }
 
     public static final class DhInitiatorState {
-        private final KeyPair keyPair;
+        private final BigInteger privateExponent;
+        private final byte[] publicKeyEncoded;
         private final byte[] nonce;
 
-        public DhInitiatorState(KeyPair keyPair, byte[] nonce) {
-            this.keyPair = keyPair;
-            this.nonce = nonce;
+        private DhInitiatorState(
+                BigInteger privateExponent, byte[] publicKeyEncoded, byte[] nonce) {
+            this.privateExponent = privateExponent;
+            this.publicKeyEncoded = Arrays.copyOf(publicKeyEncoded, publicKeyEncoded.length);
+            this.nonce = Arrays.copyOf(nonce, nonce.length);
         }
 
-        public KeyPair getKeyPair() {
-            return keyPair;
+        BigInteger getPrivateExponent() {
+            return privateExponent;
         }
 
         public byte[] getPublicKeyEncoded() {
-            return keyPair.getPublic().getEncoded();
+            return Arrays.copyOf(publicKeyEncoded, publicKeyEncoded.length);
         }
 
         public byte[] getNonce() {
-            return nonce;
+            return Arrays.copyOf(nonce, nonce.length);
         }
     }
 
@@ -121,21 +220,21 @@ public class DhKeyAgreementService {
         private final byte[] rc6Key;
 
         public DhResponderResult(byte[] publicKeyEncoded, byte[] nonce, byte[] rc6Key) {
-            this.publicKeyEncoded = publicKeyEncoded;
-            this.nonce = nonce;
-            this.rc6Key = rc6Key;
+            this.publicKeyEncoded = Arrays.copyOf(publicKeyEncoded, publicKeyEncoded.length);
+            this.nonce = Arrays.copyOf(nonce, nonce.length);
+            this.rc6Key = Arrays.copyOf(rc6Key, rc6Key.length);
         }
 
         public byte[] getPublicKeyEncoded() {
-            return publicKeyEncoded;
+            return Arrays.copyOf(publicKeyEncoded, publicKeyEncoded.length);
         }
 
         public byte[] getNonce() {
-            return nonce;
+            return Arrays.copyOf(nonce, nonce.length);
         }
 
         public byte[] getRc6Key() {
-            return rc6Key;
+            return Arrays.copyOf(rc6Key, rc6Key.length);
         }
     }
 }
