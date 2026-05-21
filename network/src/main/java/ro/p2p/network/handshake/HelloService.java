@@ -38,10 +38,7 @@ public class HelloService {
 
     public byte[] completeInitiator(InitiatorHello initiator, HelloPacket responder) {
         return keyAgreementService.completeInitiator(
-                initiator.getState().getKeyPair(),
-                responder.getPublicKey(),
-                initiator.getState().getNonce(),
-                responder.getNonce());
+                initiator.getState(), responder.getPublicKey(), responder.getNonce());
     }
 
     public static final class InitiatorHello {

@@ -207,6 +207,11 @@ Implementarea algoritmului este realizată **manual**, fără utilizarea bibliot
 
 Pentru mai multe detalii, consultați [docs/rc6.md](docs/rc6.md).
 
+Pentru analiza handshake-ului Diffie-Hellman și checklist-ul MS2, consultați:
+
+- [docs/key-agreement.md](docs/key-agreement.md)
+- [docs/ms2-checklist.md](docs/ms2-checklist.md)
+
 ---
 
 ## Structura proiectului
